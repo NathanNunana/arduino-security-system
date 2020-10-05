@@ -1,24 +1,36 @@
 // Library for the servo motor
 #include <Servo.h>
+// Library for the servo motor
+#include <GSM.h>
+
+// defining variables for the gsm model
+#define PINNUMBER ""
+#define PHONENUMBER '054*******' // add number to send the sms to
+#define SMS "Intruder detected. Alarm activated" 
 
 // Variable declaration
 const int trigPin = 12; //ultrasonic sensor's trigger pin connection
 const int echoPin = 11; //ultrasonic sensor's echo pin connection
 const float speedOfSound = 767.3; // speed of sound in miles per hour
-const float pingTime; // time taken to hit the target and back in microseconds
 const int redLedPin = 4; // red led's pin connection
 const int greenLedPin = 3; // green led's pin connection 
 const int servoPin = 6; // servo motor's pin connection
 const int buzzer = 8; // buzzer's pin connection 
 const int pirPin = 9; // pir sensor's controller pin connection
+float pingTime; // time taken to hit the target and back in microseconds
 float targetDistance;  // target distance variable for the ultrasonic sensor
 int pirStat = 0; // pir sensor's status 
 
 // Instance of the servo motor class
 Servo myLock;
+// Instances of the gsm class
+GSM accessGSM;
+GSM_SMS sms;
 
 void setup(){
   Serial.begin(9600); // Establishing a connection to the serial monitor 
+  
+  bool notConnected = true; // setting up the connection state
 
   // Ultrasonic sensor pins
   pinMode(trigPin, OUTPUT); // setting trigger pin as output 
@@ -32,7 +44,20 @@ void setup(){
   pinMode(pirPin, INPUT); // setting pir infrared sensor as input
 
   myLock.attach(servoPin); // connecting the servo pin to the servo object
-  Serial.println("Starting the security alarm system"); // displays a message to the serial monitor
+  Serial.println("Starting the arduino security system and automatic lock"); // displays a message to the serial monitor
+
+  //starting the gsm shield
+  while(notConnected){
+    if(accessGSM.begin(PINNUMBER) == GSM_READY){
+      notConnected = false;
+    }else{
+      Serial.println("SIM not connected");
+      delay(1000);
+    } 
+  }
+  
+  Serial.println("GSM initialized!"); // display message upon the initialization of the gsm model
+  
 }
 
 void loop(){
@@ -79,7 +104,9 @@ void loop(){
     Serial.println("Motion detected in the house"); // displays "Motion detected in the house" on the serial monitor
     tone(buzzer, 1000); // sets the buzzer ringing
     delayMicroseconds(100); // pausing
-    noTone(0); // stop buzzer
+    sms.beginSMS(PHONENUMBER);
+    sms.print(SMS);
+    sms.endSMS();
   }else{
     Serial.println("There's no one in the house at the moment"); // displays "There's no one in the house at the moment" on the serial monitor
     noTone(0); // stop buzzer
