@@ -1,62 +1,88 @@
-int pirPin = 2; // variable to hold pir sensor's pin 
-//int redLedPin = 13; // variable to hold red led pin
-int pirStat = 0; // variable to store pir sensor's status
-int trigPin = 12; //variable to hold ultrasonic sensor's trigger pin
-int echoPin = 11; //variable to hold ultrasonic sensor's echo pin
-float speedOfSound = 767.3; // variable to hold the speed of sound in miles per hour
-float targetDistance; // variable to hold target distance of the ultrasonic sensor
-float pingTime; // variable to hold the time the signal moves to hit target and back
-int redLedPin = 6;
-int greenLedPin = 3; 
+// Library for the servo motor
+#include <Servo.h>
+
+// Variable declaration
+const int trigPin = 12; //ultrasonic sensor's trigger pin connection
+const int echoPin = 11; //ultrasonic sensor's echo pin connection
+const float speedOfSound = 767.3; // speed of sound in miles per hour
+const float pingTime; // time taken to hit the target and back in microseconds
+const int redLedPin = 4; // red led's pin connection
+const int greenLedPin = 3; // green led's pin connection 
+const int servoPin = 6; // servo motor's pin connection
+const int buzzer = 8; // buzzer's pin connection 
+const int pirPin = 9; // pir sensor's controller pin connection
+float targetDistance;  // target distance variable for the ultrasonic sensor
+int pirStat = 0; // pir sensor's status 
+
+// Instance of the servo motor class
+Servo myLock;
 
 void setup(){
-  Serial.begin(9600); 
-  pinMode(redLedPin, OUTPUT); 
-  pinMode(pirPin,INPUT);
-  pinMode(trigPin, OUTPUT);
-  pinMode(echoPin, INPUT);
+  Serial.begin(9600); // Establishing a connection to the serial monitor 
 
-  //new pin mmodes
-  pinMode(redLedPin, OUTPUT);
-  pinMode(greenLedPin, OUTPUT);
-  Serial.println("Starting the security alarm system");
+  // Ultrasonic sensor pins
+  pinMode(trigPin, OUTPUT); // setting trigger pin as output 
+  pinMode(echoPin, INPUT); // setting echo pin as input
+
+  // Led pins
+  pinMode(redLedPin, OUTPUT); // setting red led pin as output
+  pinMode(greenLedPin, OUTPUT); // setting green led pin as output
+
+  // pir infrared sensor
+  pinMode(pirPin, INPUT); // setting pir infrared sensor as input
+
+  myLock.attach(servoPin); // connecting the servo pin to the servo object
+  Serial.println("Starting the security alarm system"); // displays a message to the serial monitor
 }
 
 void loop(){
+  // sending signal towards a target
   digitalWrite(trigPin, LOW);
-  delayMicroseconds(2000);
+  delayMicroseconds(1);
   digitalWrite(trigPin, HIGH);
-  delayMicroseconds(20);
+  delayMicroseconds(2);
   digitalWrite(trigPin, LOW);
 
+  // storing the time the signal travelled to the target and back
   pingTime = pulseIn(echoPin, HIGH);
-  pingTime = pingTime/1000000;
-  pingTime = pingTime/3600;
+  pingTime = pingTime/1000000; // converting the time in microseconds to seconds
+  pingTime = pingTime/3600; // converting the time in seconds to hours
   
-  targetDistance = speedOfSound*pingTime/2;
-  targetDistance = targetDistance/2;
-  targetDistance = targetDistance*63360;
+  targetDistance = speedOfSound*pingTime/2; // calculating the distance to the target and back
+  targetDistance = targetDistance/2; // calculating the distance to the target only
+  targetDistance = targetDistance*63360; // converting the distance in miles to inches
 
-  Serial.println(targetDistance);
-  delay(2000);
+  Serial.println(targetDistance); // displaying the distance to the serial monitor
+  delay(100); // pausing the program running
 
+  // checking the distance between the ultrasonic sensor and target and locking the door or opening it depending on the outcome
   if(targetDistance < 20){
-    digitalWrite(redLedPin, HIGH); 
-    digitalWrite(greenLdPin, LOW); 
+    digitalWrite(redLedPin, HIGH); // turning on the red led
+    digitalWrite(greenLedPin, LOW); // turning off the green led
+    delayMicroseconds(2); // pausing
+    myLock.write(160); // turning the servo motor 160 degree clockwise
+    delay(100); // pausig
+    Serial.println("Door Locked"); // displaying "Door Locked" on serial monitor 
   }else{
-    digitalWrite(redLedPin, LOW);
-    digitalWrite(greenLedPin, HIGH);
+    digitalWrite(redLedPin, LOW); // turning off the red led
+    digitalWrite(greenLedPin, HIGH); // turning on the green led
+    delayMicroseconds(2); // pausing
+    myLock.write(20); // turning the servo motor 20 degree anticlockwise
+    delay(100); // pausing 
+    Serial.println("Door Opened"); // displaying "Door Opened" on serial monitor
   }
   
-//  pirStat = digitalRead(pirPin);
-//  if(pirStat == HIGH){
-//    Serial.println("Motion detected");
-//    digitalWrite(redLedPin, LOW);
-//    delay(1000);
-//  }
-//  else{
-//    Serial.println("No motion detected");
-//    digitalWrite(redLedPin, LOW);
-//    delay(1000);
-//  }
+  pirStat  = digitalRead(pirPin); //reading the status of the pir infrared sensor
+
+  // checking the value obtained from the reading against posible outcomes
+  if(pirStat == HIGH){
+    Serial.println("Motion detected in the house"); // displays "Motion detected in the house" on the serial monitor
+    tone(buzzer, 1000); // sets the buzzer ringing
+    delayMicroseconds(100); // pausing
+    noTone(0); // stop buzzer
+  }else{
+    Serial.println("There's no one in the house at the moment"); // displays "There's no one in the house at the moment" on the serial monitor
+    noTone(0); // stop buzzer
+    delayMicroseconds(5); // pausing
+  }
 }
